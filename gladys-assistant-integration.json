@@ -1,177 +1,552 @@
 {
   "manifest_version": 1,
   "type": "device",
-  "name": "Demo Devices Template",
+  "name": "Octopus Energy France",
   "description": {
-    "en": "Starter template showing sensors, a switch, a dimmable light and a smart plug.",
-    "fr": "Template de démarrage : capteurs, interrupteur, lampe variable et prise connectée."
+    "en": "Linky and Gazpar usage, cost, balance and off-peak hours of your Octopus Energy France contract.",
+    "fr": "Consommation Linky et Gazpar, coût, solde et heures creuses de votre contrat Octopus Energy.",
+    "de": "Linky- und Gazpar-Verbrauch, Kosten, Kontostand und Nebenzeiten deines Octopus-Energy-Vertrags.",
+    "es": "Consumo Linky y Gazpar, coste, saldo y horas valle de su contrato de Octopus Energy Francia."
   },
   "version": "1.0.0",
-  "docker_image": "ghcr.io/gladysassistant/integration-template-js:1.0.0",
-  "gladys_version": ">=5.1.0",
-  "cover_image": "https://raw.githubusercontent.com/GladysAssistant/integration-template-js/master/cover.png",
-  "categories": ["lighting", "security", "environment"],
-  "transports": ["local", "cloud"],
+  "docker_image": "ghcr.io/guim31/gladys-octopus-fr:1.0.0",
+  "gladys_version": ">=5.2.0",
+  "cover_image": "https://raw.githubusercontent.com/guim31/gladys-octopus-fr/main/cover.png",
+  "categories": ["energy"],
+  "transports": ["cloud"],
   "config_schema": [
     {
       "key": "intro",
       "type": "section",
-      "label": { "en": "Getting started", "fr": "Pour commencer" },
+      "label": {
+        "en": "Your Octopus Energy customer area",
+        "fr": "Votre espace client Octopus Energy",
+        "de": "Dein Octopus-Energy-Kundenbereich",
+        "es": "Su área de cliente de Octopus Energy"
+      },
       "description": {
-        "en": "The demo weather station reads real data from the free Open-Meteo API: pick the coordinates to observe. No account, no API key.",
-        "fr": "La station météo de démonstration lit de vraies données via l'API gratuite Open-Meteo : choisissez les coordonnées à observer. Pas de compte, pas de clé d'API."
+        "en": "Sign in with the e-mail address and password of your Octopus Energy France customer area. Linky and Gazpar readings arrive a day or two late and are read every 3 hours. Not affiliated with Octopus Energy.",
+        "fr": "Connectez-vous avec l’adresse e-mail et le mot de passe de votre espace client Octopus Energy France. Les relevés Linky et Gazpar arrivent avec un ou deux jours de retard et sont lus toutes les 3 heures. Sans lien avec Octopus Energy.",
+        "de": "Melde dich mit E-Mail-Adresse und Passwort deines Kundenbereichs bei Octopus Energy France an. Linky- und Gazpar-Werte kommen ein bis zwei Tage später und werden alle 3 Stunden gelesen. Nicht mit Octopus Energy verbunden.",
+        "es": "Inicie sesión con el correo electrónico y la contraseña de su área de cliente de Octopus Energy Francia. Las lecturas Linky y Gazpar llegan con uno o dos días de retraso y se leen cada 3 horas. Sin relación con Octopus Energy."
       },
       "links": [
         {
-          "url": "https://open-meteo.com/en/docs",
-          "label": { "en": "Open-Meteo documentation", "fr": "Documentation Open-Meteo" }
+          "url": "https://github.com/guim31/gladys-octopus-fr/blob/main/docs/fr.md",
+          "label": {
+            "en": "Documentation",
+            "fr": "Documentation",
+            "de": "Dokumentation",
+            "es": "Documentación"
+          }
         }
       ]
     },
     {
-      "key": "latitude",
-      "type": "number",
-      "label": { "en": "Latitude", "fr": "Latitude" },
-      "description": {
-        "en": "Latitude used for the demo weather sensor.",
-        "fr": "Latitude utilisée par le capteur météo de démonstration."
+      "key": "email",
+      "type": "string",
+      "label": {
+        "en": "E-mail address",
+        "fr": "Adresse e-mail",
+        "de": "E-Mail-Adresse",
+        "es": "Correo electrónico"
       },
-      "placeholder": { "en": "e.g. 48.8566", "fr": "ex. 48.8566" },
-      "required": true,
-      "default": 48.8566,
-      "min": -90,
-      "max": 90
+      "placeholder": {
+        "en": "e.g. name@example.com",
+        "fr": "ex. nom@example.com",
+        "de": "z. B. name@example.com",
+        "es": "p. ej. nombre@example.com"
+      },
+      "required": true
     },
     {
-      "key": "longitude",
-      "type": "number",
-      "label": { "en": "Longitude", "fr": "Longitude" },
-      "description": {
-        "en": "Longitude used for the demo weather sensor.",
-        "fr": "Longitude utilisée par le capteur météo de démonstration."
+      "key": "password",
+      "type": "secret",
+      "label": {
+        "en": "Password",
+        "fr": "Mot de passe",
+        "de": "Passwort",
+        "es": "Contraseña"
       },
-      "placeholder": { "en": "e.g. 2.3522", "fr": "ex. 2.3522" },
-      "required": true,
-      "default": 2.3522,
-      "min": -180,
-      "max": 180
+      "required": true
     },
     {
-      "key": "unit",
+      "key": "history_days",
       "type": "select",
-      "label": { "en": "Temperature unit", "fr": "Unité de température" },
+      "label": {
+        "en": "History to import",
+        "fr": "Historique à importer",
+        "de": "Zu importierender Verlauf",
+        "es": "Historial que importar"
+      },
+      "description": {
+        "en": "Electricity days sent to the Gladys energy tracking on the first reading.",
+        "fr": "Jours d’électricité envoyés au suivi d’énergie de Gladys à la première lecture.",
+        "de": "Stromtage, die beim ersten Lesen an die Energieüberwachung von Gladys gehen.",
+        "es": "Días de electricidad enviados al seguimiento de energía de Gladys en la primera lectura."
+      },
       "required": false,
-      "default": "celsius",
+      "default": "30",
       "options": [
-        { "value": "celsius", "label": { "en": "Celsius", "fr": "Celsius" } },
-        { "value": "fahrenheit", "label": { "en": "Fahrenheit", "fr": "Fahrenheit" } }
+        {
+          "value": "7",
+          "label": { "en": "7 days", "fr": "7 jours", "de": "7 Tage", "es": "7 días" }
+        },
+        {
+          "value": "30",
+          "label": { "en": "30 days", "fr": "30 jours", "de": "30 Tage", "es": "30 días" }
+        },
+        {
+          "value": "90",
+          "label": { "en": "90 days", "fr": "90 jours", "de": "90 Tage", "es": "90 días" }
+        },
+        {
+          "value": "365",
+          "label": { "en": "1 year", "fr": "1 an", "de": "1 Jahr", "es": "1 año" }
+        }
       ]
     },
     {
-      "key": "poll_frequency",
-      "type": "number",
-      "label": { "en": "Refresh interval (s)", "fr": "Intervalle de rafraîchissement (s)" },
+      "key": "language",
+      "type": "select",
+      "label": {
+        "en": "Language of device names",
+        "fr": "Langue des noms d’appareils",
+        "de": "Sprache der Gerätenamen",
+        "es": "Idioma de los nombres de dispositivos"
+      },
       "description": {
-        "en": "How often sensors are polled, in seconds (one minute minimum).",
-        "fr": "Fréquence d'interrogation des capteurs, en secondes (une minute minimum)."
+        "en": "Names are set when you add a meter to Gladys.",
+        "fr": "Les noms sont fixés à l’ajout d’un compteur dans Gladys.",
+        "de": "Die Namen werden beim Hinzufügen eines Zählers zu Gladys festgelegt.",
+        "es": "Los nombres se fijan al añadir un contador a Gladys."
       },
       "required": false,
-      "default": 300,
-      "min": 60,
-      "max": 3600
+      "default": "fr",
+      "options": [
+        {
+          "value": "en",
+          "label": { "en": "English", "fr": "Anglais", "de": "Englisch", "es": "Inglés" }
+        },
+        {
+          "value": "fr",
+          "label": { "en": "French", "fr": "Français", "de": "Französisch", "es": "Francés" }
+        },
+        {
+          "value": "de",
+          "label": { "en": "German", "fr": "Allemand", "de": "Deutsch", "es": "Alemán" }
+        },
+        {
+          "value": "es",
+          "label": { "en": "Spanish", "fr": "Espagnol", "de": "Spanisch", "es": "Español" }
+        }
+      ]
     }
   ],
   "actions": [
     {
-      "key": "test_weather",
-      "label": { "en": "Test the weather provider", "fr": "Tester le fournisseur météo" },
-      "timeout_seconds": 30
-    },
-    {
-      "key": "identify",
-      "label": { "en": "Identify a device", "fr": "Identifier un appareil" },
-      "fields": [
-        {
-          "key": "device",
-          "type": "select",
-          "source": "devices",
-          "label": { "en": "Device", "fr": "Appareil" },
-          "required": true
-        }
-      ]
+      "key": "refresh_now",
+      "label": {
+        "en": "Sign in and refresh now",
+        "fr": "Se connecter et rafraîchir",
+        "de": "Anmelden und jetzt aktualisieren",
+        "es": "Iniciar sesión y actualizar"
+      },
+      "description": {
+        "en": "Signs in and reads the account now, instead of waiting for the 3-hour cycle.",
+        "fr": "Se connecte et lit le compte maintenant, sans attendre le cycle de 3 heures.",
+        "de": "Meldet sich an und liest das Konto jetzt, statt auf den 3-Stunden-Zyklus zu warten.",
+        "es": "Inicia sesión y lee la cuenta ahora, sin esperar al ciclo de 3 horas."
+      },
+      "timeout_seconds": 120
     }
   ],
   "scene_triggers": [
     {
-      "key": "motion_detected",
-      "label": { "en": "Motion detected", "fr": "Mouvement détecté" },
+      "key": "off_peak_started",
+      "label": {
+        "en": "Off-peak hours start",
+        "fr": "Début des heures creuses",
+        "de": "Beginn der Nebenzeit",
+        "es": "Comienzo de las horas valle"
+      },
       "description": {
-        "en": "A demo motion sensor saw a person or an animal move.",
-        "fr": "Un détecteur de démonstration a vu bouger une personne ou un animal."
+        "en": "Fires on the minute the off-peak hours of the contract start: start the water heater, the car charge…",
+        "fr": "Se déclenche à la minute où commencent les heures creuses du contrat : chauffe-eau, recharge de la voiture…",
+        "de": "Löst in der Minute aus, in der die Nebenzeit des Vertrags beginnt: Warmwasserspeicher, Laden des Autos…",
+        "es": "Se activa en el minuto en que empiezan las horas valle del contrato: termo eléctrico, carga del coche…"
       },
       "fields": [
         {
-          "key": "device",
+          "key": "meter",
           "type": "select",
           "source": "devices",
-          "label": { "en": "Sensor", "fr": "Détecteur" }
+          "label": {
+            "en": "Electricity meter",
+            "fr": "Compteur d’électricité",
+            "de": "Stromzähler",
+            "es": "Contador de electricidad"
+          }
+        }
+      ],
+      "variables": [
+        {
+          "key": "until",
+          "type": "string",
+          "label": {
+            "en": "End of the off-peak hours (HH:MM)",
+            "fr": "Fin des heures creuses (HH:MM)",
+            "de": "Ende der Nebenzeit (HH:MM)",
+            "es": "Fin de las horas valle (HH:MM)"
+          }
         },
         {
-          "key": "target",
+          "key": "price",
+          "type": "number",
+          "label": {
+            "en": "Off-peak price (€/kWh)",
+            "fr": "Prix en heures creuses (€/kWh)",
+            "de": "Preis in der Nebenzeit (€/kWh)",
+            "es": "Precio en horas valle (€/kWh)"
+          }
+        }
+      ]
+    },
+    {
+      "key": "off_peak_ended",
+      "label": {
+        "en": "Off-peak hours end",
+        "fr": "Fin des heures creuses",
+        "de": "Ende der Nebenzeit",
+        "es": "Fin de las horas valle"
+      },
+      "description": {
+        "en": "Fires on the minute the off-peak hours of the contract end and the peak hours begin.",
+        "fr": "Se déclenche à la minute où finissent les heures creuses du contrat et où commencent les heures pleines.",
+        "de": "Löst in der Minute aus, in der die Nebenzeit des Vertrags endet und die Hauptzeit beginnt.",
+        "es": "Se activa en el minuto en que terminan las horas valle del contrato y empiezan las horas punta."
+      },
+      "fields": [
+        {
+          "key": "meter",
+          "type": "select",
+          "source": "devices",
+          "label": {
+            "en": "Electricity meter",
+            "fr": "Compteur d’électricité",
+            "de": "Stromzähler",
+            "es": "Contador de electricidad"
+          }
+        }
+      ],
+      "variables": [
+        {
+          "key": "until",
+          "type": "string",
+          "label": {
+            "en": "Next off-peak hours (HH:MM)",
+            "fr": "Prochaines heures creuses (HH:MM)",
+            "de": "Nächste Nebenzeit (HH:MM)",
+            "es": "Próximas horas valle (HH:MM)"
+          }
+        },
+        {
+          "key": "price",
+          "type": "number",
+          "label": {
+            "en": "Peak price (€/kWh)",
+            "fr": "Prix en heures pleines (€/kWh)",
+            "de": "Preis in der Hauptzeit (€/kWh)",
+            "es": "Precio en horas punta (€/kWh)"
+          }
+        }
+      ]
+    },
+    {
+      "key": "daily_reading_available",
+      "label": {
+        "en": "New day of readings",
+        "fr": "Nouvelle journée relevée",
+        "de": "Neuer Tag mit Messwerten",
+        "es": "Nuevo día de lecturas"
+      },
+      "description": {
+        "en": "Octopus received a new complete day from the Linky or Gazpar meter (often a day or two late).",
+        "fr": "Octopus a reçu une nouvelle journée complète du compteur Linky ou Gazpar (souvent un ou deux jours après).",
+        "de": "Octopus hat einen neuen vollständigen Tag vom Linky- oder Gazpar-Zähler erhalten (oft ein bis zwei Tage später).",
+        "es": "Octopus recibió un nuevo día completo del contador Linky o Gazpar (a menudo uno o dos días después)."
+      },
+      "fields": [
+        {
+          "key": "meter",
+          "type": "select",
+          "source": "devices",
+          "label": {
+            "en": "Meter",
+            "fr": "Compteur",
+            "de": "Zähler",
+            "es": "Contador"
+          }
+        },
+        {
+          "key": "energy",
           "type": "multi_select",
-          "label": { "en": "What moved", "fr": "Ce qui a bougé" },
+          "label": {
+            "en": "Energy",
+            "fr": "Énergie",
+            "de": "Energie",
+            "es": "Energía"
+          },
           "options": [
-            { "value": "person", "label": { "en": "Person", "fr": "Personne" } },
-            { "value": "animal", "label": { "en": "Animal", "fr": "Animal" } }
+            {
+              "value": "electricity",
+              "label": {
+                "en": "Electricity",
+                "fr": "Électricité",
+                "de": "Strom",
+                "es": "Electricidad"
+              }
+            },
+            {
+              "value": "gas",
+              "label": { "en": "Gas", "fr": "Gaz", "de": "Gas", "es": "Gas" }
+            }
           ]
         }
       ],
       "variables": [
         {
-          "key": "target",
+          "key": "date",
           "type": "string",
-          "label": { "en": "What moved", "fr": "Ce qui a bougé" }
+          "label": {
+            "en": "Day (YYYY-MM-DD)",
+            "fr": "Jour (AAAA-MM-JJ)",
+            "de": "Tag (JJJJ-MM-TT)",
+            "es": "Día (AAAA-MM-DD)"
+          }
+        },
+        {
+          "key": "consumption",
+          "type": "number",
+          "label": {
+            "en": "Consumption of the day (kWh)",
+            "fr": "Consommation du jour (kWh)",
+            "de": "Verbrauch des Tages (kWh)",
+            "es": "Consumo del día (kWh)"
+          }
+        },
+        {
+          "key": "cost",
+          "type": "number",
+          "label": {
+            "en": "Cost of the day (€)",
+            "fr": "Coût du jour (€)",
+            "de": "Kosten des Tages (€)",
+            "es": "Coste del día (€)"
+          }
+        },
+        {
+          "key": "month_consumption",
+          "type": "number",
+          "label": {
+            "en": "Consumption of the month (kWh)",
+            "fr": "Consommation du mois (kWh)",
+            "de": "Verbrauch des Monats (kWh)",
+            "es": "Consumo del mes (kWh)"
+          }
+        },
+        {
+          "key": "month_cost",
+          "type": "number",
+          "label": {
+            "en": "Cost of the month (€)",
+            "fr": "Coût du mois (€)",
+            "de": "Kosten des Monats (€)",
+            "es": "Coste del mes (€)"
+          }
+        },
+        {
+          "key": "energy",
+          "type": "string",
+          "label": {
+            "en": "Energy (electricity or gas)",
+            "fr": "Énergie (electricity ou gas)",
+            "de": "Energie (electricity oder gas)",
+            "es": "Energía (electricity o gas)"
+          }
         }
       ]
     }
   ],
   "scene_actions": [
     {
-      "key": "identify_device",
-      "label": { "en": "Identify a device", "fr": "Identifier un appareil" },
-      "description": {
-        "en": "Make a device signal itself (the demo light blinks).",
-        "fr": "Fait se signaler un appareil (la lampe de démonstration clignote)."
+      "key": "get_meter_summary",
+      "label": {
+        "en": "Read an Octopus meter summary",
+        "fr": "Lire le bilan d’un compteur Octopus",
+        "de": "Übersicht eines Octopus-Zählers lesen",
+        "es": "Leer el resumen de un contador Octopus"
       },
-      "timeout_seconds": 15,
+      "description": {
+        "en": "Gives the last day read, the month, their cost, the balance and the tariff period, for a message.",
+        "fr": "Donne le dernier jour relevé, le mois, leur coût, le solde et la période tarifaire, pour un message.",
+        "de": "Liefert den letzten gelesenen Tag, den Monat, ihre Kosten, den Kontostand und die Tarifzeit, für eine Nachricht.",
+        "es": "Da el último día leído, el mes, su coste, el saldo y el periodo tarifario, para un mensaje."
+      },
+      "timeout_seconds": 10,
       "fields": [
         {
-          "key": "device",
+          "key": "meter",
           "type": "select",
           "source": "devices",
-          "label": { "en": "Device", "fr": "Appareil" },
+          "label": {
+            "en": "Meter",
+            "fr": "Compteur",
+            "de": "Zähler",
+            "es": "Contador"
+          },
           "required": true
         }
       ],
       "outputs": [
         {
-          "key": "signalled",
-          "type": "boolean",
-          "label": { "en": "Device signalled", "fr": "Appareil signalé" }
+          "key": "date",
+          "type": "string",
+          "label": {
+            "en": "Last day read (YYYY-MM-DD)",
+            "fr": "Dernier jour relevé (AAAA-MM-JJ)",
+            "de": "Letzter gelesener Tag (JJJJ-MM-TT)",
+            "es": "Último día leído (AAAA-MM-DD)"
+          }
+        },
+        {
+          "key": "consumption",
+          "type": "number",
+          "label": {
+            "en": "Consumption of that day (kWh)",
+            "fr": "Consommation de ce jour (kWh)",
+            "de": "Verbrauch dieses Tages (kWh)",
+            "es": "Consumo de ese día (kWh)"
+          }
+        },
+        {
+          "key": "cost",
+          "type": "number",
+          "label": {
+            "en": "Cost of that day (€)",
+            "fr": "Coût de ce jour (€)",
+            "de": "Kosten dieses Tages (€)",
+            "es": "Coste de ese día (€)"
+          }
+        },
+        {
+          "key": "month_consumption",
+          "type": "number",
+          "label": {
+            "en": "Consumption of the month (kWh)",
+            "fr": "Consommation du mois (kWh)",
+            "de": "Verbrauch des Monats (kWh)",
+            "es": "Consumo del mes (kWh)"
+          }
+        },
+        {
+          "key": "month_cost",
+          "type": "number",
+          "label": {
+            "en": "Cost of the month (€)",
+            "fr": "Coût du mois (€)",
+            "de": "Kosten des Monats (€)",
+            "es": "Coste del mes (€)"
+          }
+        },
+        {
+          "key": "balance",
+          "type": "number",
+          "label": {
+            "en": "Account balance (€)",
+            "fr": "Solde du compte (€)",
+            "de": "Kontostand (€)",
+            "es": "Saldo de la cuenta (€)"
+          }
+        },
+        {
+          "key": "next_payment",
+          "type": "number",
+          "label": {
+            "en": "Next payment (€)",
+            "fr": "Prochaine échéance (€)",
+            "de": "Nächste Zahlung (€)",
+            "es": "Próximo pago (€)"
+          }
+        },
+        {
+          "key": "next_payment_date",
+          "type": "string",
+          "label": {
+            "en": "Next payment date",
+            "fr": "Date de la prochaine échéance",
+            "de": "Datum der nächsten Zahlung",
+            "es": "Fecha del próximo pago"
+          }
+        },
+        {
+          "key": "period",
+          "type": "string",
+          "label": {
+            "en": "Tariff period (base, peak, off_peak)",
+            "fr": "Période tarifaire (base, peak, off_peak)",
+            "de": "Tarifzeit (base, peak, off_peak)",
+            "es": "Periodo tarifario (base, peak, off_peak)"
+          }
+        },
+        {
+          "key": "price",
+          "type": "number",
+          "label": {
+            "en": "Current price (€/kWh)",
+            "fr": "Prix en cours (€/kWh)",
+            "de": "Aktueller Preis (€/kWh)",
+            "es": "Precio actual (€/kWh)"
+          }
         }
       ]
     }
   ],
   "widgets": [
     {
-      "key": "demo_status",
-      "label": { "en": "Demo status", "fr": "État de la démo" },
-      "description": {
-        "en": "Live temperature and plug power, plug connection and observed location.",
-        "fr": "Température et puissance en direct, connexion de la prise, position observée."
+      "key": "energy_summary",
+      "label": {
+        "en": "Octopus Energy",
+        "fr": "Octopus Energy",
+        "de": "Octopus Energy",
+        "es": "Octopus Energy"
       },
-      "icon": "activity",
-      "action_timeout_seconds": 15
+      "description": {
+        "en": "Last day read, month and cost, current tariff period and balance of a meter.",
+        "fr": "Dernier jour relevé, mois et coût, période tarifaire en cours et solde d’un compteur.",
+        "de": "Letzter gelesener Tag, Monat und Kosten, aktuelle Tarifzeit und Kontostand eines Zählers.",
+        "es": "Último día leído, mes y coste, periodo tarifario actual y saldo de un contador."
+      },
+      "icon": "zap",
+      "settings": [
+        {
+          "key": "meter",
+          "type": "select",
+          "source": "devices",
+          "label": {
+            "en": "Meter",
+            "fr": "Compteur",
+            "de": "Zähler",
+            "es": "Contador"
+          },
+          "description": {
+            "en": "The first electricity meter when empty.",
+            "fr": "Le premier compteur d’électricité si vide.",
+            "de": "Der erste Stromzähler, wenn leer.",
+            "es": "El primer contador de electricidad si está vacío."
+          }
+        }
+      ]
     }
   ]
 }

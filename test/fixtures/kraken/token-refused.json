@@ -1,0 +1,15 @@
+{
+  "errors": [
+    {
+      "message": "Invalid data.",
+      "locations": [{ "line": 3, "column": 3 }],
+      "path": ["obtainKrakenToken"],
+      "extensions": {
+        "errorType": "VALIDATION",
+        "errorCode": "KT-CT-1135",
+        "errorDescription": "Please make sure the email and password are correct."
+      }
+    }
+  ],
+  "data": { "obtainKrakenToken": null }
+}

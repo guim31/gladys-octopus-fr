@@ -12,44 +12,24 @@ the notes of the version's GitHub Release.
 
 ### Added
 
-- A working example of scene triggers, scene actions and dashboard widgets
-  (Gladys 5.1.0 or later).
-- `CHANGELOG.md`, rolled by the Release workflow.
-- A GitHub Release for every version, with its changelog section as notes: the
-  Gladys Supervision page links each version to the repository's releases.
-- CI runs the tests on Node 22 and 24, and builds the Docker image.
-- Dependabot keeps the npm dependencies and the GitHub Actions up to date.
-- `SECURITY.md` (how to report a vulnerability) and `CLAUDE.md` (project rules
-  for contributors and coding assistants).
-- Manifest tests: `version` matches `package.json`, `docker_image` is tagged
-  with it, descriptions hold 10 to 100 characters, placeholders are
-  multi-language objects.
-- The latitude and longitude fields show an example value as placeholder.
+- Octopus Energy France: sign-in with the e-mail address and password of the
+  customer area, one device per supply point (Linky electricity meter,
+  Gazpar gas meter) of every account.
+- Electricity in the energy tracking of Gladys 5.2: the daily consumption,
+  dated on its real day although Enedis sends it a day or two late, with the
+  history of your choice (7 days to a year) at the first reading.
+- Consumption and cost of the last day read and of the month, account
+  balance, next payment and its date, name of the offer, for electricity and
+  gas.
+- The tariff period of the contract, followed to the minute: off-peak hours
+  now, period name, current price per kWh, off-peak ranges (base,
+  peak/off-peak and two-season offers; the period only for Tempo-like
+  offers).
+- Scene triggers _Off-peak hours start_, _Off-peak hours end_ and _New day of
+  readings_, and the scene action _Read an Octopus meter summary_.
+- The dashboard widget "Octopus Energy".
+- A reading every 3 hours by the integration itself, and the _Sign in and
+  refresh now_ action.
+- Texts and documentation in English, French, German and Spanish.
 
-### Changed
-
-- Node.js 22 or later is required (Node 20 is end-of-life).
-- Integration SDK 0.15.0. The tests now run against the fake Gladys of the
-  SDK, which refuses the payloads Gladys refuses.
-- The refresh interval is one minute minimum, the fastest Gladys polls a
-  device. The plug's power is only sent when it changes, and every 30
-  minutes otherwise.
-
-### Fixed
-
-- Gladys refused the devices of the Discovery tab: the weather station and
-  the plug declared their poll frequency in seconds instead of one of the
-  values Gladys accepts, and were never polled. They now poll every minute,
-  and the readings follow the refresh interval of the configuration.
-
-- The release commit no longer fails `npm run format:check`: the Release
-  workflow updates the manifest `version` and `docker_image` in place instead
-  of re-printing the whole file with `jq`.
-- The integration can write to `/data`: the image creates the directory owned
-  by the `node` user, a new Docker volume was owned by root.
-- A sub-container running the integration's own image follows it to the new
-  tag at each release, as well as in the manifest of the build summary: it kept
-  the previous tag, which may not exist on the registry. Sub-containers on a
-  third-party image (a broker, a database...) keep theirs.
-
-[Unreleased]: https://github.com/GladysAssistant/integration-template-js/commits/main
+[Unreleased]: https://github.com/guim31/gladys-octopus-fr/commits/main

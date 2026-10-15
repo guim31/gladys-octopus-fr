@@ -1,169 +1,249 @@
 // -----------------------------------------------------------------------------
-// Dashboard widgets (SDK v0.14+, Gladys 5.1+).
+// The dashboard widget "Octopus Energy": the last day read, the month to date
+// and their cost, the current tariff period and the account, with the last
+// 14 days as bars, for one supply point.
 //
-// A widget puts the integration's own data on the Gladys dashboard without a
-// dedicated core widget. The manifest `widgets` field declares its identity
-// (key, label, icon, optional per-instance `settings`); at runtime the
-// integration returns a DECLARATIVE content — `text`, `value`, `gauge`,
-// `status`, `chart`, `card-list`, `image`, `button` — that the core renders
-// with its own theme, dark mode and translations. No HTML, no CSS.
-//
-// Each entry of WIDGETS is keyed by the widget `key` and exposes:
-//   - get(gladys, { settings, language, units, config }): the content,
-//     registered by index.js with `gladys.onWidgetGet(key, ...)`;
-//   - action(gladys, { actionKey, params, settings, config }) (optional): a
-//     tapped `button` carrying an `action`, registered with
-//     `gladys.onWidgetAction`.
-//
-// Check your contents in the tests with `validateWidgetContent` (exported by
-// the SDK, see test/widgets.test.js), or run with DEBUG=gladys-integration-sdk
-// to have the SDK log every violation of the vocabulary and the budget.
+// Built from what the last cycle read (no request per display), localized
+// from the widget's language. Core budget: 8 components, 6 tiles, 2 texts,
+// 1 status list, 1 focal (the chart). The values are plain tiles (not bound
+// to a feature): the widget works before the meter is added to Gladys, and
+// the integration asks for a refresh after every cycle and at every change
+// of tariff period.
 // -----------------------------------------------------------------------------
 
 import {
-  createLogger,
-  DEVICE_FEATURE_CATEGORIES,
-  DEVICE_TRANSPORTS,
+  WIDGET_CHART_TYPES,
   WIDGET_COLORS,
+  WIDGET_TEXT_VARIANTS,
 } from '@gladysassistant/integration-sdk';
-import { identifyDevice } from './devices/index.js';
-import { weatherStation } from './devices/weatherStation.js';
-import { plug } from './devices/plug.js';
-import { light } from './devices/light.js';
+import { PERIOD_NAMES, formatDate, formatMonth, pick } from './i18n.js';
+import { FRANCE, startOfLocalDay } from './time.js';
 
-const logger = createLogger({ name: 'widgets' });
+// The readings move a few times a day; the period is recomputed at its end.
+const TTL_SECONDS = 3600;
 
-// Widget key, as declared in the manifest `widgets` field.
-export const DEMO_STATUS_WIDGET = 'demo_status';
-
-// Keys of the `button` actions the demo_status content declares.
-const DEMO_STATUS_ACTIONS = { IDENTIFY_LIGHT: 'identify_light' };
-
-// How the plug transport reads in the status list.
-const TRANSPORT_STATUS = {
-  [DEVICE_TRANSPORTS.LOCAL]: { value: { en: 'Local', fr: 'Locale' }, color: WIDGET_COLORS.SUCCESS },
-  [DEVICE_TRANSPORTS.CLOUD]: { value: { en: 'Cloud', fr: 'Cloud' }, color: WIDGET_COLORS.INFO },
-  [DEVICE_TRANSPORTS.UNREACHABLE]: {
-    value: { en: 'Unreachable', fr: 'Injoignable' },
-    color: WIDGET_COLORS.DANGER,
+export const WIDGET_TEXT = {
+  en: {
+    lastDay: 'Day',
+    monthCost: 'Month cost',
+    dayCost: 'Day cost',
+    period: 'Tariff period',
+    until: (time) => `until ${time}`,
+    price: 'Price per kWh',
+    balance: 'Account balance',
+    nextPayment: 'Next payment',
+    on: (date) => `on ${date}`,
+    chart: 'Last days (kWh)',
+    dataUntil: (date) => `Readings up to ${date} (Enedis/GRDF: 1 to 2 days late)`,
+    notConfigured: 'Configure the Octopus Energy France integration: e-mail address and password.',
+    password: 'Octopus Energy refused the sign-in: check the integration configuration.',
+    noData: 'No reading yet: the first one comes after the sign-in.',
+  },
+  fr: {
+    lastDay: 'Jour',
+    monthCost: 'Coût du mois',
+    dayCost: 'Coût du jour',
+    period: 'Période tarifaire',
+    until: (time) => `jusqu’à ${time}`,
+    price: 'Prix du kWh',
+    balance: 'Solde du compte',
+    nextPayment: 'Prochaine échéance',
+    on: (date) => `le ${date}`,
+    chart: 'Derniers jours (kWh)',
+    dataUntil: (date) => `Relevés jusqu’au ${date} (Enedis/GRDF : 1 à 2 jours de retard)`,
+    notConfigured:
+      'Configurez l’intégration Octopus Energy France : adresse e-mail et mot de passe.',
+    password: 'Octopus Energy refuse la connexion : vérifiez la configuration de l’intégration.',
+    noData: 'Aucun relevé pour l’instant : le premier arrive après la connexion.',
+  },
+  de: {
+    lastDay: 'Tag',
+    monthCost: 'Kosten Monat',
+    dayCost: 'Kosten Tag',
+    period: 'Tarifzeit',
+    until: (time) => `bis ${time}`,
+    price: 'Preis pro kWh',
+    balance: 'Kontostand',
+    nextPayment: 'Nächste Zahlung',
+    on: (date) => `am ${date}`,
+    chart: 'Letzte Tage (kWh)',
+    dataUntil: (date) => `Werte bis ${date} (Enedis/GRDF: 1 bis 2 Tage Verzug)`,
+    notConfigured: 'Richte die Integration Octopus Energy France ein: E-Mail-Adresse und Passwort.',
+    password: 'Octopus Energy lehnt die Anmeldung ab: prüfe die Konfiguration der Integration.',
+    noData: 'Noch keine Werte: die ersten kommen nach der Anmeldung.',
+  },
+  es: {
+    lastDay: 'Día',
+    monthCost: 'Coste del mes',
+    dayCost: 'Coste del día',
+    period: 'Periodo tarifario',
+    until: (time) => `hasta las ${time}`,
+    price: 'Precio del kWh',
+    balance: 'Saldo de la cuenta',
+    nextPayment: 'Próximo pago',
+    on: (date) => `el ${date}`,
+    chart: 'Últimos días (kWh)',
+    dataUntil: (date) => `Lecturas hasta el ${date} (Enedis/GRDF: 1 a 2 días de retraso)`,
+    notConfigured:
+      'Configure la integración Octopus Energy France: correo electrónico y contraseña.',
+    password:
+      'Octopus Energy rechaza el inicio de sesión: compruebe la configuración de la integración.',
+    noData: 'Aún no hay lecturas: la primera llega tras iniciar sesión.',
   },
 };
 
-// A live tile references a feature by its external_id: read it from the
-// discovery payload itself, so the widget and the device never disagree.
-function featureExternalId(gladys, config, blueprint, category) {
-  const device = blueprint.buildDevice(gladys, config);
-  return device.features.find((feature) => feature.category === category).external_id;
+const LOCALES = { en: 'en-GB', fr: 'fr-FR', de: 'de-DE', es: 'es-ES' };
+
+/** "42,10 €" in the language's format. */
+export function formatEuros(value, language, digits = 2) {
+  return new Intl.NumberFormat(LOCALES[language] ?? LOCALES.en, {
+    style: 'currency',
+    currency: 'EUR',
+    minimumFractionDigits: digits,
+    maximumFractionDigits: digits,
+  }).format(value);
 }
 
-function plugConnectionStatus(gladys, config) {
-  const { transport, degraded } = plug.transport(gladys, config);
-  const { value, color } = TRANSPORT_STATUS[transport];
-  if (degraded) {
-    return {
-      value: { en: `${value.en} (degraded mode)`, fr: `${value.fr} (mode dégradé)` },
-      color: WIDGET_COLORS.WARNING,
-    };
-  }
-  return { value, color };
+const capitalize = (text) => text.charAt(0).toUpperCase() + text.slice(1);
+
+function message(text) {
+  return {
+    ttl_seconds: 300,
+    components: [{ type: 'text', variant: WIDGET_TEXT_VARIANTS.BODY, text }],
+  };
 }
-
-export const WIDGETS = {
-  [DEMO_STATUS_WIDGET]: {
-    // `settings` holds the per-instance values of the declared `settings`
-    // (none here); `language` and `units` are those of the user viewing the
-    // dashboard, for the values you format yourself. Multi-language objects
-    // (`{ en, fr }`) are picked by the core, like everywhere else.
-    async get(gladys, { config }) {
-      logger.debug(`onWidgetGet <- ${DEMO_STATUS_WIDGET}`);
-      return {
-        // Reload policy: the computed parts below only change with the
-        // config, and index.js nudges the widget on every (re)connection and
-        // config update (see refreshWidgets) — the TTL is just a safety net.
-        ttl_seconds: 300,
-        components: [
-          // Device-bound tiles: LIVE, they follow the published states over
-          // the core's real-time path. No TTL, no nudge involved.
-          {
-            type: 'value',
-            label: { en: 'Temperature', fr: 'Température' },
-            icon: 'thermometer',
-            device_feature: featureExternalId(
-              gladys,
-              config,
-              weatherStation,
-              DEVICE_FEATURE_CATEGORIES.TEMPERATURE_SENSOR,
-            ),
-          },
-          {
-            type: 'value',
-            label: { en: 'Office plug', fr: 'Prise du bureau' },
-            icon: 'zap',
-            device_feature: featureExternalId(
-              gladys,
-              config,
-              plug,
-              DEVICE_FEATURE_CATEGORIES.ENERGY_SENSOR,
-            ),
-          },
-          // Computed rows: what the integration knows that no device feature
-          // carries. Served from the core cache until the TTL or a nudge.
-          {
-            type: 'status',
-            items: [
-              {
-                label: { en: 'Plug connection', fr: 'Connexion de la prise' },
-                icon: 'wifi',
-                ...plugConnectionStatus(gladys, config),
-              },
-              {
-                label: { en: 'Observed location', fr: 'Position observée' },
-                icon: 'map-pin',
-                value: `${config.latitude.toFixed(2)}, ${config.longitude.toFixed(2)}`,
-                color: WIDGET_COLORS.NEUTRAL,
-              },
-            ],
-          },
-          // `params` are declared HERE and sent back as-is: the handler never
-          // receives user input (a dashboard can hang on a public wall).
-          {
-            type: 'button',
-            label: { en: 'Identify the light', fr: 'Identifier la lampe' },
-            icon: 'eye',
-            style: 'secondary',
-            action: {
-              key: DEMO_STATUS_ACTIONS.IDENTIFY_LIGHT,
-              params: { device: light.deviceExternalId(gladys) },
-            },
-          },
-        ],
-      };
-    },
-
-    // Resolve an optional toast (string or multi-language object, ≤ 200
-    // characters). After a successful action the core drops the cached
-    // content and every open dashboard refetches it: no nudge needed.
-    async action(gladys, { actionKey, params, config }) {
-      logger.info(`onWidgetAction <- ${DEMO_STATUS_WIDGET}.${actionKey}`);
-      if (actionKey === DEMO_STATUS_ACTIONS.IDENTIFY_LIGHT) {
-        return identifyDevice(gladys, params.device, config);
-      }
-      // Throwing acks the action as failed: the message reaches the user.
-      throw new Error(`Unknown widget action: ${actionKey}`);
-    },
-  },
-};
 
 /**
- * Freshness nudge: ask the core to re-pull every widget NOW instead of
- * waiting for the content TTL. Call it when you KNOW a computed content
- * changed (here: the config, which drives the plug transport and the observed
- * location) — and after every (re)connection, since the nudges are
- * fire-and-forget: rate-limited core-side to 1 per 10 s per widget, dropped
- * silently while disconnected.
+ * @param {object} input
+ * @param {object|null} input.meter a supply point of the last cycle, with its `summary` (src/app.js)
+ * @param {object|null} input.period the current tariff period (src/tariff.js), electricity only
+ * @param {string} input.language
+ * @param {boolean} input.configured
+ * @param {boolean} input.refused the password was refused
+ * @param {number} [input.secondsToChange] until the tariff period changes
  */
-export function refreshWidgets(gladys) {
-  for (const key of Object.keys(WIDGETS)) {
-    gladys.requestWidgetRefresh(key);
+export function buildWidgetContent({
+  meter,
+  period,
+  language,
+  configured,
+  refused,
+  secondsToChange,
+}) {
+  const t = WIDGET_TEXT[language] ?? WIDGET_TEXT.en;
+  const lang = WIDGET_TEXT[language] ? language : 'en';
+  if (!configured) {
+    return message(t.notConfigured);
   }
+  if (refused) {
+    return message(t.password);
+  }
+  if (!meter) {
+    return message(t.noData);
+  }
+  const { lastDay, month, recent } = meter.summary ?? {};
+  const components = [];
+  if (lastDay) {
+    components.push(
+      {
+        type: 'text',
+        variant: WIDGET_TEXT_VARIANTS.CAPTION,
+        text: t.dataUntil(formatDate(lastDay.date, lang, { year: false })),
+      },
+      {
+        type: 'value',
+        label: `${t.lastDay} ${formatDate(lastDay.date, lang, { year: false })}`,
+        value: lastDay.kwh,
+        unit: 'kWh',
+        icon: 'zap',
+      },
+    );
+  }
+  if (month) {
+    components.push({
+      type: 'value',
+      label: capitalize(formatMonth(month.month, lang).split(' ')[0]),
+      value: month.kwh,
+      unit: 'kWh',
+      icon: 'calendar',
+    });
+    if (month.cost !== null) {
+      components.push({
+        type: 'value',
+        label: t.monthCost,
+        value: month.cost,
+        unit: '€',
+        icon: 'credit-card',
+      });
+    }
+  }
+  if (lastDay && lastDay.cost !== null) {
+    components.push({
+      type: 'value',
+      label: t.dayCost,
+      value: lastDay.cost,
+      unit: '€',
+      icon: 'tag',
+    });
+  }
+  if (recent && recent.length >= 2) {
+    components.push({
+      type: 'chart',
+      chart_type: WIDGET_CHART_TYPES.BAR,
+      title: t.chart,
+      unit: 'kWh',
+      series: [
+        {
+          name: 'kWh',
+          points: recent.map((day) => ({
+            t: new Date(startOfLocalDay(day.date, FRANCE)).toISOString(),
+            v: day.kwh,
+          })),
+        },
+      ],
+    });
+  }
+
+  const items = [];
+  if (period) {
+    const name = pick(PERIOD_NAMES, lang)[period.period];
+    items.push({
+      label: t.period,
+      value: period.until ? `${name} ${t.until(period.until)}` : name,
+      icon: period.period === 'off_peak' ? 'moon' : 'sun',
+      color: period.period === 'off_peak' ? WIDGET_COLORS.SUCCESS : WIDGET_COLORS.NEUTRAL,
+    });
+    if (typeof period.price === 'number') {
+      items.push({ label: t.price, value: formatEuros(period.price, lang, 4) });
+    }
+  }
+  if (typeof meter.balance === 'number') {
+    items.push({
+      label: t.balance,
+      value: formatEuros(meter.balance, lang),
+      color: meter.balance < 0 ? WIDGET_COLORS.WARNING : WIDGET_COLORS.NEUTRAL,
+    });
+  }
+  const payment = meter.agreement?.nextPayment;
+  if (payment && typeof payment.amount === 'number') {
+    items.push({
+      label: t.nextPayment,
+      value: payment.date
+        ? `${formatEuros(payment.amount, lang)} ${t.on(formatDate(payment.date, lang, { year: false }))}`
+        : formatEuros(payment.amount, lang),
+    });
+  }
+  if (items.length > 0) {
+    components.push({ type: 'status', items });
+  }
+  if (components.length === 0) {
+    return message(t.noData);
+  }
+
+  // Re-pulled when the period ends, so it never shows a stale one for long.
+  const ttl =
+    typeof secondsToChange === 'number' && secondsToChange > 0
+      ? Math.max(60, Math.min(TTL_SECONDS, Math.ceil(secondsToChange) + 5))
+      : TTL_SECONDS;
+  return { ttl_seconds: ttl, components };
 }

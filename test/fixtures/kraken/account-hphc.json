@@ -1,0 +1,158 @@
+{
+  "data": {
+    "account": {
+      "number": "A-0F1E2D3C",
+      "ledgers": [
+        {
+          "balance": 4210,
+          "ledgerType": "FRA_ELECTRICITY_LEDGER",
+          "name": "Électricité (09876543210123)",
+          "number": "L-00000001"
+        },
+        {
+          "balance": -1550,
+          "ledgerType": "FRA_GAS_LEDGER",
+          "name": "Gaz (21987654321098)",
+          "number": "L-00000002"
+        },
+        {
+          "balance": 0,
+          "ledgerType": "POT_LEDGER",
+          "name": "Cagnotte",
+          "number": "L-00000003"
+        }
+      ],
+      "properties": [
+        {
+          "id": "100001",
+          "supplyPoints": {
+            "edges": [
+              {
+                "node": {
+                  "id": "SP-ELEC-1",
+                  "externalIdentifier": "09876543210123",
+                  "marketName": "ELECTRICITY",
+                  "meterPoint": {
+                    "id": "MP-ELEC-1",
+                    "distributorStatus": "SERVC",
+                    "meterKind": "LINKY",
+                    "subscribedMaxPower": "9",
+                    "offPeakLabel": "HC (22H00-6H00)",
+                    "poweredStatus": "ALIM",
+                    "providerCalendar": {
+                      "id": "FC_HPHC",
+                      "temporalClasses": [
+                        { "code": "HC", "label": "Heures creuses", "description": "22H00-6H00" },
+                        { "code": "HP", "label": "Heures Pleines", "description": "" }
+                      ]
+                    }
+                  }
+                }
+              },
+              {
+                "node": {
+                  "id": "SP-GAS-1",
+                  "externalIdentifier": "21987654321098",
+                  "marketName": "GAS",
+                  "meterPoint": {
+                    "id": "MP-GAS-1",
+                    "gasNature": "NATURAL",
+                    "poweredStatus": null
+                  }
+                }
+              },
+              {
+                "node": {
+                  "id": "SP-ELEC-OLD",
+                  "externalIdentifier": "09876543210999",
+                  "marketName": "ELECTRICITY",
+                  "meterPoint": {
+                    "id": "MP-ELEC-OLD",
+                    "distributorStatus": "RESIL",
+                    "meterKind": "LINKY",
+                    "subscribedMaxPower": "6",
+                    "offPeakLabel": null,
+                    "poweredStatus": "LIMI",
+                    "providerCalendar": null
+                  }
+                }
+              }
+            ]
+          }
+        }
+      ],
+      "agreements": {
+        "edges": [
+          {
+            "node": {
+              "id": "9001",
+              "validFrom": "2026-02-01T00:00:00+01:00",
+              "validTo": null,
+              "isActive": true,
+              "supplyPoint": { "id": "SP-ELEC-1", "externalIdentifier": "09876543210123" },
+              "product": { "code": "ELEC_FIXE_HPHC_TEST", "displayName": "Électricité Fixe HP/HC" },
+              "energySupplyRate": {
+                "standingRate": { "pricePerUnitWithTaxes": "19524.0", "unitType": "ANNUAL" },
+                "rates": {
+                  "edges": [
+                    {
+                      "node": {
+                        "__typename": "ElectricitySupplyConsumptionRateType",
+                        "pricePerUnitWithTaxes": "20.81",
+                        "unitType": "KILOWATT_HOURS",
+                        "validFrom": "2026-02-01T00:00:00+01:00",
+                        "validTo": null,
+                        "timeSlots": [],
+                        "temporalClass": { "code": "HP", "label": "Heures Pleines" }
+                      }
+                    },
+                    {
+                      "node": {
+                        "__typename": "ElectricitySupplyConsumptionRateType",
+                        "pricePerUnitWithTaxes": "16.35",
+                        "unitType": "KILOWATT_HOURS",
+                        "validFrom": "2026-02-01T00:00:00+01:00",
+                        "validTo": null,
+                        "timeSlots": [{ "startAt": "22:00:00", "endAt": "06:00:00" }],
+                        "temporalClass": { "code": "HC", "label": "Heures creuses" }
+                      }
+                    }
+                  ]
+                }
+              },
+              "nextPaymentForecast": { "amount": 8500, "date": "2026-11-05" }
+            }
+          },
+          {
+            "node": {
+              "id": "9002",
+              "validFrom": "2026-02-01T00:00:00+01:00",
+              "validTo": null,
+              "isActive": true,
+              "supplyPoint": { "id": "SP-GAS-1", "externalIdentifier": "21987654321098" },
+              "product": { "code": "GAZ_FIXE_TEST", "displayName": "Gaz Fixe" },
+              "energySupplyRate": {
+                "standingRate": { "pricePerUnitWithTaxes": "28800.0", "unitType": "ANNUAL" },
+                "rates": {
+                  "edges": [
+                    {
+                      "node": {
+                        "__typename": "SupplyConsumptionRateType",
+                        "pricePerUnitWithTaxes": "11.20",
+                        "unitType": "KILOWATT_HOURS",
+                        "validFrom": "2026-02-01T00:00:00+01:00",
+                        "validTo": null,
+                        "timeSlots": []
+                      }
+                    }
+                  ]
+                }
+              },
+              "nextPaymentForecast": { "amount": 6200, "date": "2026-11-05" }
+            }
+          }
+        ]
+      }
+    }
+  }
+}
