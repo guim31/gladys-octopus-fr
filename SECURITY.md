@@ -30,6 +30,23 @@ Gladys before reporting a problem.
 
 In scope: the code of this repository and the Docker image it publishes.
 
+- **Secrets**: the e-mail address and the password of the Octopus Energy
+  customer area live in the Gladys configuration. The integration sends them
+  only to the Octopus Energy France API (`obtainKrakenToken`), and only when
+  it has no valid refresh token; it never writes them to `/data` nor to the
+  logs (the logger blanks them even inside an error message). The access
+  token (about an hour) stays in memory.
+- **Stored in `/data`**: `octopus-state.json`, readable by the owner only
+  (0600), written atomically: the Octopus refresh token (about a week),
+  keyed by a hash of the e-mail address (no address in the file), and per
+  meter how far the energy tracking was fed and the last day announced to
+  the scenes. Deleting the file only means one sign-in with the password.
+- **Network**: requests go only to `https://api.oefr-kraken.energy` in HTTPS,
+  certificates verified; the integration opens no port and needs no access
+  to the local network. It reads data and never changes anything on the
+  account.
+
 Out of scope: Gladys Assistant itself (see its
 [security policy](https://github.com/GladysAssistant/Gladys/security/policy)),
-and the third-party services and devices the integration talks to.
+Octopus Energy and its API, and the other devices and services of your
+network.

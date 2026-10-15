@@ -1,0 +1,10 @@
+{
+  "errors": [
+    {
+      "message": "Too many requests.",
+      "path": ["account"],
+      "extensions": { "errorType": "APPLICATION", "errorCode": "KT-CT-1199" }
+    }
+  ],
+  "data": null
+}

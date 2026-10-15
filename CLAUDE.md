@@ -11,13 +11,21 @@ Gladys through
 [`@gladysassistant/integration-sdk`](https://github.com/GladysAssistant/integration-sdk-js),
 its only runtime dependency. It started from the official JavaScript template.
 
+This one follows an Octopus Energy France contract: it signs in to the Kraken
+GraphQL API of Octopus France (`api.oefr-kraken.energy`), reads the supply
+points (Linky, Gazpar), the agreements and their rates, the ledgers and the
+daily measurements, and computes the tariff period of the contract every
+minute. Electricity feeds the Gladys 5.2 energy tracking through dated daily
+consumption (`publishEnergyConsumption`).
+
 ## Commands
 
 ```bash
 npm install
 npm test                                  # node --test, the built-in runner
-node --test test/devices.test.js          # one file
-node --test --test-name-pattern "plug"    # tests whose name matches
+node --test test/app.test.js              # one file
+node --test --test-name-pattern "off-peak" # tests whose name matches
+node scripts/probe.mjs                    # live API, read-only (needs Internet)
 npm run lint                              # ESLint
 npm run format:check                      # Prettier, as the CI runs it
 npm run format                            # Prettier, fix in place
@@ -31,16 +39,23 @@ pushing.
 ## Architecture
 
 ```
-index.js                          SDK wiring only: handlers registered before connect()
-src/devices/index.js              registry of the device blueprints + dispatch helpers
-src/devices/<type>.js             one device type per file (buildDevice, onPoll, onSetValue...)
-src/scenes.js                     scene action handlers (manifest `scene_actions`)
-src/widgets.js                    dashboard widget handlers (manifest `widgets`)
-src/config.js                     DEFAULT_CONFIG (mirrors the manifest defaults) + normalization
-src/weather.js                    example driver (Open-Meteo)
+index.js                          SDK wiring only: createApp + registerHandlers, then connect()
+src/app.js                        the cloud cycle, the clock, the refresh action, widget, scene action
+src/poller.js                     the container's timers: 3-hour cloud cycle, 1-minute clock
+src/octopus/client.js             Kraken GraphQL client: sign-in, refresh token, errors, pages
+src/octopus/queries.js            the GraphQL documents (adapted from ha-octopus-french, MIT)
+src/octopus/parse.js              pure: raw account → supply points; measurement → kWh and cost
+src/tariff.js                     pure: off-peak ranges of a contract, tariff period of an instant
+src/summary.js                    pure: measurements → French days, daily feed, last day / month
+src/meters.js                     one device per supply point, feature keys, states
+src/widgets.js                    the "energy_summary" widget content (pure)
+src/store.js                      /data/octopus-state.json (0600): refresh token, per-meter cursor
+src/time.js, src/issues.js        Paris time without a library; failures logged once
+src/i18n.js, src/config.js        texts in four languages; DEFAULT_CONFIG mirrors the manifest
+scripts/probe.mjs                 checks the live API read-only (schema, made-up account, real one)
 gladys-assistant-integration.json manifest: name, config_schema, actions, image...
-docs/en.md, docs/fr.md            user documentation, re-hosted by Gladys (mandatory)
-test/                             node --test, against the SDK's fake Gladys (integration-sdk/testing)
+docs/{en,fr,de,es}.md             user documentation, re-hosted by Gladys, same sections
+test/                             node --test, SDK fake Gladys + test/helpers/kraken-server.js
 .github/scripts/release.mjs       release helpers (manifest bump, changelog), tested in test/
 ```
 
@@ -70,8 +85,10 @@ test/                             node --test, against the SDK's fake Gladys (in
   `type: "provider"`: 5.1.0). `test/manifest.test.js` ties the manifest to the
   code (defaults, action, scene and widget handlers): change both sides
   together.
-- **User-facing text** is bilingual (English and French): action messages,
-  manifest texts, and `docs/en.md` / `docs/fr.md`, kept in sync.
+- **User-facing text** is in four languages (English, French, German with
+  "du", Spanish with "usted"): action messages, manifest texts, widget texts,
+  feature names, and `docs/en.md`, `docs/fr.md`, `docs/de.md`, `docs/es.md`
+  with the same sections. `test/i18n.test.js` enforces it.
 - **Style.** Prettier formats, ESLint catches mistakes. Comments explain why,
   in English. Tests never touch the network.
 
@@ -197,6 +214,69 @@ code de ce dépôt. Compléter ce fichier quand un nouveau piège est découvert
 - Les filtres de scène ne font qu'égalité et appartenance : un seuil reste le travail d'un capteur.
 - **Les clés de widgets, de déclencheurs et d'actions sont figées une fois publiées.**
 - `gladys_version` `>=5.1.0` dès qu'il y a widgets, déclencheurs ou actions de scène.
+
+## Intégration Octopus Energy France : API et pièges
+
+**Sources.** Requêtes GraphQL et lecture des réponses adaptées de `domodom30/ha-octopus-french`
+(MIT, crédité dans le README et les docs). L'API de la France est une instance Kraken à part
+(`https://api.oefr-kraken.energy/v1/graphql/`), différente d'Octopus UK. Le proxy des sessions de
+code la refuse (403) : `scripts/probe.mjs` éprouve l'API réelle depuis une machine qui a le réseau
+(introspection du schéma, faux compte → refus propre attendu, vrai compte → comptages seulement).
+**Rien n'a encore été vérifié contre l'API réelle** : les formes viennent du code et des tests de
+ha-octopus-french (fixtures `test/fixtures/kraken/`, anonymisées).
+
+**Connexion.** `obtainKrakenToken(input: { email, password })` → jeton d'accès (JWT ~1 h, en-tête
+`Authorization: JWT <jeton>`, comme ha-octopus-french) et jeton de renouvellement (~7 j,
+`refreshExpiresIn`), gardé dans `/data` sous un hachage de l'e-mail : un redémarrage ne renvoie pas
+le mot de passe. Kraken répond HTTP 200 avec `errors` : une erreur **avec `path`** levée par le
+résolveur = identifiants refusés ; **sans `path`** = requête invalide (API changée), jamais lue
+comme un mauvais mot de passe. `KT-CT-1199` = limite de débit (nouvel essai dans 1 h). Jeton
+expiré en cours de requête (`KT-CT-1111/1112/1124` ou mots-clés) : une seule reconnexion. Les codes
+d'erreur exacts sont à confirmer par la sonde. Un mot de passe refusé **arrête les essais** jusqu'à
+un changement de config (risque de blocage du compte).
+
+**Données.**
+
+- Montants en **centimes** (`balance`, `nextPaymentForecast.amount`, `costInclTax.estimatedAmount`),
+  prix unitaires en **c€/kWh** (`pricePerUnitWithTaxes`) : tout sort en euros de `parse.js`. Les
+  nombres arrivent en chaînes, parfois `"0E-18"`.
+- Relevés : `property(id).measurements` avec `utilityFilters: [{ electricityFilters | gasFilters:
+{ readingFrequencyType: DAY_INTERVAL | MONTH_INTERVAL, marketSupplyPointId, readingQuality: ACTUAL
+(électricité seulement) } }]`, paginés (`first`/`after`). Le jour d'un relevé = date de `startAt`
+  **à Paris** (on voit des `startAt` à `T02:00:00+02:00`). Le coût d'un jour = somme des
+  `costInclTax` des statistiques **sauf `ABONNEMENT`** ; le gaz n'a pas de montant : kWh × prix
+  unique du contrat.
+- Compteur résilié (`distributorStatus: RESIL` et `poweredStatus` absent ou `LIMI`) : non proposé.
+  Deux compteurs de la même énergie : le ledger se trouve par le numéro entre parenthèses de son nom.
+- Le « mois » est celui du **dernier relevé**, pas le mois civil (pas de faux zéro le 1er).
+
+**Heures creuses** (`src/tariff.js`) : plages du tarif HC de l'accord (`timeSlots`
+`"22:00:00"`), sinon description de la classe HC du calendrier fournisseur (`"0H50-6H50"`,
+`"Novembre à mars, de 23h à 7h"`), sinon `offPeakLabel` du Linky (`"HC (22H00-6H00)"`), en heure de
+Paris. Codes : `HP/HC/BASE`, deux saisons `HPB/HCB/HPH/HCH` (saison par les mois de la
+description, avril–octobre par défaut), Tempo `HPE/HCE/HPHI/HCHI/HPP/HCP` (prix inconnu : couleur du
+jour absente du compte). Tarifs sans classe : deux prix → le moins cher est HC.
+
+**Gladys.**
+
+- Électricité : `energy-sensor/daily-consumption` alimenté par `publishEnergyConsumption` (`date`
+  = jour français, tamponné au minuit du fuseau de Gladys), 3 jours de recouvrement à chaque cycle,
+  **aucun index**. Gaz : pas de consommation (le cœur la rattacherait au compteur électrique).
+  Bilans en `energy-sensor/index-yesterday` (ignoré par la logique du cœur), coûts et solde en
+  `currency/decimal` `euro`.
+- Le front n'affiche le nom publié d'une fonctionnalité que si une autre de l'appareil a le même
+  **type** (`matchFeature` de `front/src/utils/device.js` compare le seul `type`, pas la
+  catégorie) : la seule `input/binary` (« Heures creuses en cours ») s'affiche donc sous le nom de
+  l'appareil. Les `text/text`, `decimal` et `index-yesterday` sont plusieurs : noms visibles.
+- Les états sont republiés toutes les 6 h (battement) : une scène « état = 1 » sur **Heures creuses
+  en cours** pourrait se relancer. D'où les déclencheurs `off_peak_started`/`off_peak_ended`, une
+  fois au changement, jamais au redémarrage (la première minute ne fixe que la référence).
+- Deux minuteurs : cycle cloud de 3 h (≈ 5 requêtes, nouvel essai 1 h) et horloge d'une minute
+  sans réseau. Une reconnexion à Gladys ne relit Octopus que si un cycle est dû.
+
+**Pistes non faites** : capacité `energy_contracts` (la 5.2.1 la porte) pour publier les gabarits
+de contrat Octopus ; clé d'API (non trouvée côté France) ; Octopus Intelligent (pilotage, hors
+lecture seule).
 
 ## Store
 
