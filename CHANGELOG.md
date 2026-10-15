@@ -10,6 +10,8 @@ the notes of the version's GitHub Release.
 
 ## [Unreleased]
 
+## [1.0.1] - 2026-10-15
+
 ### Added
 
 - Octopus Energy France: sign-in with the e-mail address and password of the
@@ -32,4 +34,5 @@ the notes of the version's GitHub Release.
   refresh now_ action.
 - Texts and documentation in English, French, German and Spanish.
 
-[Unreleased]: https://github.com/guim31/gladys-octopus-fr/commits/main
+[Unreleased]: https://github.com/guim31/gladys-octopus-fr/compare/v1.0.1...HEAD
+[1.0.1]: https://github.com/guim31/gladys-octopus-fr/releases/tag/v1.0.1
