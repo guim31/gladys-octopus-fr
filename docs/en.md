@@ -33,7 +33,7 @@ two late.
 
 ## Requirements
 
-- Gladys **5.2.0** or later (import of a consumption dated in the past).
+- Gladys **5.3.0** or later (catalog countries; 5.2.0 for import of a consumption dated in the past).
 - An electricity or gas contract with **Octopus Energy France** and access to
   your customer area (e-mail address and password). Octopus customers in the
   United Kingdom or another country are not concerned: their platform is a

@@ -33,7 +33,7 @@ lecturas con uno o dos días de retraso.
 
 ## Requisitos
 
-- Gladys **5.2.0** o posterior (importación de un consumo fechado en el
+- Gladys **5.3.0** o posterior (países del catálogo; 5.2.0 para importación de un consumo fechado en el
   pasado).
 - Un contrato de electricidad o de gas con **Octopus Energy France** y acceso
   a su área de cliente (correo electrónico y contraseña). Los clientes de

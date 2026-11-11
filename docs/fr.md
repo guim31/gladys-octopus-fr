@@ -34,7 +34,7 @@ les relevés avec un ou deux jours de retard.
 
 ## Prérequis
 
-- Gladys **5.2.0** ou plus récent (import d'une consommation datée dans le
+- Gladys **5.3.0** ou plus récent (pays du catalogue ; 5.2.0 pour import d'une consommation datée dans le
   passé).
 - Un contrat d'électricité ou de gaz chez **Octopus Energy France** et l'accès
   à votre espace client (adresse e-mail et mot de passe). Les clients
