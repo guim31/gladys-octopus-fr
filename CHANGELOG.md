@@ -10,6 +10,8 @@ the notes of the version's GitHub Release.
 
 ## [Unreleased]
 
+## [1.0.2] - 2026-11-13
+
 ### Changed
 
 - Declared for France only (`countries: ["FR"]`): the Gladys catalog of an
@@ -40,5 +42,6 @@ the notes of the version's GitHub Release.
   refresh now_ action.
 - Texts and documentation in English, French, German and Spanish.
 
-[Unreleased]: https://github.com/guim31/gladys-octopus-fr/compare/v1.0.1...HEAD
+[Unreleased]: https://github.com/guim31/gladys-octopus-fr/compare/v1.0.2...HEAD
+[1.0.2]: https://github.com/guim31/gladys-octopus-fr/compare/v1.0.1...v1.0.2
 [1.0.1]: https://github.com/guim31/gladys-octopus-fr/releases/tag/v1.0.1
