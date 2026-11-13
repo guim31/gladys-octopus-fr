@@ -43,7 +43,7 @@ the **energy tracking of Gladys 5.2**, dated on the day it was consumed.
 
 ## Requirements
 
-- Gladys Assistant **5.2.0** or later (dated consumption for the energy
+- Gladys Assistant **5.3.0** or later (catalog countries; 5.2.0 for dated consumption for the energy
   tracking, widgets, scene triggers and actions).
 - An Octopus Energy **France** customer account (e-mail address and
   password). Octopus UK and the other countries run a different API.

@@ -34,7 +34,7 @@ Enedis die Messwerte ein bis zwei Tage später liefert.
 
 ## Voraussetzungen
 
-- Gladys **5.2.0** oder neuer (Import eines in der Vergangenheit datierten
+- Gladys **5.3.0** oder neuer (Länder im Katalog; 5.2.0 für Import eines in der Vergangenheit datierten
   Verbrauchs).
 - Ein Strom- oder Gasvertrag bei **Octopus Energy France** und Zugang zu
   deinem Kundenbereich (E-Mail-Adresse und Passwort). Octopus-Kunden im
